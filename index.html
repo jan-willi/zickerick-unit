@@ -2,278 +2,378 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Der Zickerick-Rechner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zickerick Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        
-        /* Custom range slider styling */
-        input[type=range] {
-            -webkit-appearance: none; 
-            background: transparent; 
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #f8fafc;
+            transition: background-color 0.8s ease;
         }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 20px;
-            width: 20px;
+            height: 24px;
+            width: 24px;
             border-radius: 50%;
-            background: #4F46E5;
+            background: #ffffff;
+            border: 2px solid currentColor;
             cursor: pointer;
-            margin-top: -8px; 
-            box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d; 
+            margin-top: -10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.1s;
         }
+
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 4px;
+            height: 6px;
             cursor: pointer;
-            background: #d1d5db;
-            border-radius: 1.3px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 999px;
         }
-        
-        .zic-meter {
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Type Button Selection */
+        .type-card {
+            transition: all 0.2s ease;
+        }
+        .type-card.active {
+            background-color: white;
+            border-color: currentColor;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Result Animation */
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.9; }
+        }
+        .value-update {
+            animation: pulse-soft 0.3s ease-out;
+        }
+
+        /* Remove number spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 text-slate-800 relative overflow-x-hidden">
 
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
+    <!-- Ambient Background Gradient -->
+    <div id="ambientBg" class="fixed inset-0 z-0 opacity-40 transition-colors duration-1000 bg-gradient-to-br from-slate-200 to-slate-300"></div>
+
+    <!-- Main Card -->
+    <div class="relative z-10 w-full max-w-lg bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden">
         
         <!-- Header -->
-        <div class="bg-indigo-600 p-6 text-white text-center relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                <i class="fas fa-temperature-high text-8xl -ml-10 -mt-4 absolute"></i>
+        <div class="px-8 pt-8 pb-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Zickerick<span class="text-indigo-600">.io</span></h1>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mt-1">Gefühlte Temperatur</p>
             </div>
-            <h1 class="text-3xl font-bold tracking-tight mb-1">Zickerick <span class="text-indigo-200 font-light">Rechner</span></h1>
-            <p class="text-indigo-100 text-sm">Die Einheit für gefühlte thermische Ungerechtigkeit.</p>
+            <div id="statusIcon" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 transition-colors duration-500">
+                <i class="fas fa-thermometer-half"></i>
+            </div>
         </div>
 
-        <div class="p-6 space-y-6">
+        <div class="p-8 space-y-8">
 
-            <!-- Input: Actual Temp -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-600 mb-2">
-                    <i class="fas fa-thermometer-half mr-2 text-indigo-500"></i>Echte Raumtemperatur (°C)
-                </label>
-                <div class="flex items-center">
-                    <input type="number" id="tempInput" value="21" class="w-full text-center text-2xl font-bold text-slate-700 border-b-2 border-indigo-200 focus:border-indigo-600 outline-none py-2 transition-colors" oninput="calculateZic()">
+            <!-- Section 1: Temperature (Fine Control) -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-end">
+                    <label class="text-sm font-bold text-slate-500 uppercase tracking-wide">Raumtemperatur</label>
+                    <div class="flex items-baseline">
+                        <input type="number" id="tempInputNumber" value="21.0" step="0.5" 
+                            class="text-right w-20 text-3xl font-black bg-transparent border-b-2 border-transparent focus:border-indigo-500 outline-none text-slate-800 transition-colors"
+                            onchange="syncTemp('number')">
+                        <span class="text-lg font-bold text-slate-400 ml-1">°C</span>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Input: Personal Type -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-600 mb-2">
-                    <i class="fas fa-user mr-2 text-indigo-500"></i>Dein Stoffwechsel-Typ
-                </label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button onclick="setType('frostbeule')" class="type-btn p-2 rounded-lg border border-slate-200 hover:bg-blue-50 hover:border-blue-300 text-xs text-center transition-all" id="btn-frostbeule">
-                        ❄️<br>Frostbeule
-                    </button>
-                    <button onclick="setType('normal')" class="type-btn p-2 rounded-lg border-2 border-indigo-600 bg-indigo-50 text-xs text-center transition-all" id="btn-normal">
-                        😐<br>Normalo
-                    </button>
-                    <button onclick="setType('ofen')" class="type-btn p-2 rounded-lg border border-slate-200 hover:bg-red-50 hover:border-red-300 text-xs text-center transition-all" id="btn-ofen">
-                        🔥<br>Heizkraftwerk
-                    </button>
-                </div>
-            </div>
-
-            <!-- Input: Clothing -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-600 mb-2">
-                    <i class="fas fa-tshirt mr-2 text-indigo-500"></i>Kleidungs-Index
-                </label>
-                <select id="clothingInput" onchange="calculateZic()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700">
-                    <option value="-3">Strand-Modus (Kurze Hose/Rock)</option>
-                    <option value="0" selected>Büro-Standard (Hemd/Bluse)</option>
-                    <option value="3">Kuschel-Modus (Dicker Pulli)</option>
-                    <option value="6">Arktis-Modus (Jacke im Büro)</option>
-                </select>
-            </div>
-
-            <!-- Input: Rage Level -->
-            <div>
-                <div class="flex justify-between mb-1">
-                    <label class="text-sm font-semibold text-slate-600">
-                        <i class="fas fa-fire-alt mr-2 text-indigo-500"></i>Innerer Stress / Wut
-                    </label>
-                    <span id="rageValue" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">0%</span>
-                </div>
-                <input type="range" id="rageInput" min="0" max="10" value="0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" oninput="calculateZic()">
-                <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-                    <span>Zen-Meister</span>
-                    <span>Deadline in 5min</span>
-                </div>
-            </div>
-
-            <!-- Extra Checkboxes -->
-            <div class="flex gap-4">
-                <label class="flex items-center space-x-2 cursor-pointer group">
-                    <input type="checkbox" id="coffeeInput" onchange="calculateZic()" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
-                    <span class="text-sm text-slate-600 group-hover:text-indigo-600 transition-colors">Heißer Kaffee?</span>
-                </label>
-                <label class="flex items-center space-x-2 cursor-pointer group">
-                    <input type="checkbox" id="windowInput" onchange="calculateZic()" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300">
-                    <span class="text-sm text-slate-600 group-hover:text-indigo-600 transition-colors">Fenster offen?</span>
-                </label>
-            </div>
-
-            <hr class="border-slate-100">
-
-            <!-- Result Area -->
-            <div class="text-center">
-                <p class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-2">Dein Ergebnis</p>
                 
-                <div class="relative h-24 flex items-center justify-center">
-                    <!-- Dynamic Result Badge -->
-                    <div id="resultCircle" class="w-24 h-24 rounded-full flex items-center justify-center bg-gray-100 border-4 border-gray-200 zic-meter shadow-inner">
-                        <div class="text-center">
-                            <span id="zicResult" class="text-3xl font-black text-slate-700 block leading-none">0</span>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase">Zic</span>
+                <div class="relative pt-2">
+                    <input type="range" id="tempInputRange" min="15" max="30" step="0.1" value="21" 
+                        class="text-indigo-600"
+                        oninput="syncTemp('range')">
+                    <div class="flex justify-between text-[10px] text-slate-400 font-semibold mt-2 uppercase tracking-wide">
+                        <span>15° (Kühlraum)</span>
+                        <span>30° (Sauna)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: User Type -->
+            <div class="space-y-3">
+                <label class="text-sm font-bold text-slate-500 uppercase tracking-wide">Dein Typ</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="setType('frostbeule')" id="btn-frostbeule" class="type-card group p-3 rounded-xl border border-slate-200 bg-slate-50 text-left hover:bg-white active:bg-slate-100">
+                        <div class="text-xl mb-1 group-hover:scale-110 transition-transform origin-left">❄️</div>
+                        <div class="text-xs font-bold text-slate-700">Frostbeule</div>
+                    </button>
+                    <button onclick="setType('normal')" id="btn-normal" class="type-card active group p-3 rounded-xl border-2 border-indigo-500 bg-white text-left text-indigo-600">
+                        <div class="text-xl mb-1 group-hover:scale-110 transition-transform origin-left">😐</div>
+                        <div class="text-xs font-bold">Normalo</div>
+                    </button>
+                    <button onclick="setType('ofen')" id="btn-ofen" class="type-card group p-3 rounded-xl border border-slate-200 bg-slate-50 text-left hover:bg-white active:bg-slate-100">
+                        <div class="text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔥</div>
+                        <div class="text-xs font-bold text-slate-700">Heizkraftwerk</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Section 3: Modifiers (Grid) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Rage Slider -->
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <label class="text-xs font-bold text-slate-500 uppercase flex items-center">
+                            <i class="fas fa-bolt text-amber-500 mr-1.5"></i> Stress-Pegel
+                        </label>
+                        <span id="rageValue" class="text-xs font-bold text-slate-700 bg-slate-100 px-1.5 rounded">0%</span>
+                    </div>
+                    <input type="range" id="rageInput" min="0" max="10" value="0" class="text-amber-500" oninput="calculate()">
+                </div>
+
+                <!-- Clothing Dropdown (Styled) -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-500 uppercase flex items-center">
+                        <i class="fas fa-tshirt text-teal-500 mr-1.5"></i> Kleidung
+                    </label>
+                    <div class="relative">
+                        <select id="clothingInput" onchange="calculate()" class="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl py-2.5 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                            <option value="-3">Strand-Modus</option>
+                            <option value="0" selected>Büro-Standard</option>
+                            <option value="3">Dicker Pulli</option>
+                            <option value="6">Arktis-Jacke</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                            <i class="fas fa-chevron-down text-xs"></i>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <p id="zicText" class="mt-4 text-lg font-medium text-slate-600 italic">
-                    "Alles perfekt."
-                </p>
+            <!-- Toggles -->
+            <div class="flex gap-4 pt-2">
+                <label class="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-xl border border-transparent hover:border-slate-200 w-full transition-all">
+                    <div class="relative">
+                        <input type="checkbox" id="coffeeInput" onchange="calculate()" class="peer sr-only">
+                        <div class="w-10 h-6 bg-slate-300 rounded-full peer peer-checked:bg-brown-600 transition-colors"></div>
+                        <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                    </div>
+                    <span class="text-xs font-bold text-slate-600 group-hover:text-slate-800">Kaffee-Boost</span>
+                </label>
+                
+                <label class="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-xl border border-transparent hover:border-slate-200 w-full transition-all">
+                    <div class="relative">
+                        <input type="checkbox" id="windowInput" onchange="calculate()" class="peer sr-only">
+                        <div class="w-10 h-6 bg-slate-300 rounded-full peer-checked:bg-sky-500 transition-colors"></div>
+                        <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4"></div>
+                    </div>
+                    <span class="text-xs font-bold text-slate-600 group-hover:text-slate-800">Zugluft</span>
+                </label>
             </div>
 
         </div>
-        
-        <!-- Footer -->
-        <div class="bg-slate-50 p-4 text-center border-t border-slate-100">
-            <p class="text-xs text-slate-400">Einheit gemäß ISO-Norm 0815 (Scherz)</p>
+
+        <!-- Sticky Result Bar -->
+        <div id="resultBar" class="bg-slate-900 text-white p-6 transition-colors duration-500">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold opacity-60 uppercase tracking-widest">Gefühltes Klima</span>
+                <span id="zicTime" class="text-[10px] opacity-40 font-mono">CALC...</span>
+            </div>
+            
+            <div class="flex items-end justify-between">
+                <div>
+                    <h2 id="zicText" class="text-lg font-bold leading-tight max-w-[200px]">Bereit zur Berechnung.</h2>
+                </div>
+                <div class="text-right">
+                    <div class="flex items-baseline justify-end">
+                        <span id="zicSign" class="text-2xl font-medium opacity-50 mr-1">+</span>
+                        <span id="zicResult" class="text-5xl font-black tracking-tighter value-update">0.0</span>
+                    </div>
+                    <span class="text-xs font-bold opacity-60 tracking-widest block mt-1">ZICKERICK</span>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Hidden audio for subtle feedback could go here, but let's stick to visual -->
+
     <script>
         let currentType = 'normal';
-
-        const typeModifiers = {
-            'frostbeule': 4, // Needs it warmer (so actual temp feels colder -> negative impact on calculation if we normalize to 21)
-                             // Logic: Ideal temp for Frostbeule is 25. Actual is 21. Diff is -4.
-                             // We will implement logic: Zic = Perceived - Ideal
-            'normal': 0,
-            'ofen': -3       // Always hot. Ideal is 18. Actual 21. Diff +3.
+        
+        // Configuration
+        const config = {
+            idealTemp: {
+                frostbeule: 24.5,
+                normal: 21.0,
+                ofen: 18.0
+            },
+            colors: {
+                cold: { bg: '#e0f2fe', text: '#0284c7', bar: '#0ea5e9', icon: 'fa-snowflake' },  // Sky
+                neutral: { bg: '#f0fdf4', text: '#16a34a', bar: '#22c55e', icon: 'fa-check' }, // Green
+                hot: { bg: '#fef2f2', text: '#dc2626', bar: '#ef4444', icon: 'fa-fire' }       // Red
+            }
         };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            calculate();
+            updateTime();
+            setInterval(updateTime, 60000);
+        });
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('zicTime').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Sync Range and Number inputs
+        function syncTemp(source) {
+            const range = document.getElementById('tempInputRange');
+            const number = document.getElementById('tempInputNumber');
+            
+            if (source === 'range') {
+                number.value = parseFloat(range.value).toFixed(1);
+            } else {
+                let val = parseFloat(number.value);
+                // Clamp functionality
+                if(val < 10) val = 10;
+                if(val > 40) val = 40;
+                range.value = val;
+            }
+            calculate();
+        }
 
         function setType(type) {
             currentType = type;
             
-            // UI Update
-            document.querySelectorAll('.type-btn').forEach(btn => {
-                btn.classList.remove('border-2', 'border-indigo-600', 'bg-indigo-50');
-                btn.classList.add('border', 'border-slate-200');
+            // Reset Styles
+            document.querySelectorAll('.type-card').forEach(btn => {
+                btn.classList.remove('active', 'border-indigo-500', 'border-2', 'bg-white', 'text-indigo-600');
+                btn.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-700');
             });
             
+            // Set Active Style
             const activeBtn = document.getElementById('btn-' + type);
-            activeBtn.classList.remove('border', 'border-slate-200');
-            activeBtn.classList.add('border-2', 'border-indigo-600', 'bg-indigo-50');
+            activeBtn.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-700');
+            activeBtn.classList.add('active', 'border-2', 'border-indigo-500', 'bg-white', 'text-indigo-600'); // Ensure border-2 overrides border
 
-            calculateZic();
+            calculate();
         }
 
-        function calculateZic() {
-            // 1. Get Values
-            const actualTemp = parseFloat(document.getElementById('tempInput').value) || 21;
+        function calculate() {
+            // 1. Gather Inputs
+            const actualTemp = parseFloat(document.getElementById('tempInputRange').value);
             const clothingMod = parseFloat(document.getElementById('clothingInput').value);
             const rageLvl = parseInt(document.getElementById('rageInput').value);
             const hasCoffee = document.getElementById('coffeeInput').checked;
             const windowOpen = document.getElementById('windowInput').checked;
 
-            // Update Rage Label
+            // Update Labels
             document.getElementById('rageValue').innerText = rageLvl + "/10";
 
-            // 2. Define "Base Comfort" temperature based on type
-            // Frostbeule needs 24°C to feel like Normalo at 21°C
-            // Ofen needs 18°C to feel like Normalo at 21°C
-            let targetTemp = 21; 
-            if (currentType === 'frostbeule') targetTemp = 24;
-            if (currentType === 'ofen') targetTemp = 18;
-
-            // 3. Calculate "Perceived Heat" modifiers (Added to the Actual Temp)
-            // If I wear a jacket (+6), 20°C feels like 26°C.
-            let perceivedTemp = actualTemp;
-
-            // Clothing adds heat
-            perceivedTemp += (clothingMod * 0.8); 
-
-            // Rage adds heat (internal body heat)
-            perceivedTemp += (rageLvl * 0.4);
-
-            // Coffee adds temporary heat
-            if (hasCoffee) perceivedTemp += 1.5;
-
-            // Open window (Draft) subtracts heat perception significantly
-            if (windowOpen) perceivedTemp -= 3.0;
-
-
-            // 4. Calculate Zickerick
-            // Zickerick = Perceived Temp - Target Comfort Temp
-            // Example: Perceived 25, Target 21 = +4 Zic (Too hot)
-            // Example: Perceived 18, Target 21 = -3 Zic (Too cold)
-            let zic = perceivedTemp - targetTemp;
-
-            // Rounding
-            zic = Math.round(zic * 10) / 10;
+            // 2. Logic Core
+            // Target
+            const target = config.idealTemp[currentType];
             
-            // Avoid -0
-            if (zic === -0) zic = 0;
+            // Perceived Temp Calculation
+            let perceived = actualTemp;
+            
+            // Physics Engine (simplified)
+            perceived += (clothingMod * 0.7); // Clothing adds insulation
+            perceived += (rageLvl * 0.35);    // Rage adds internal heat
+            if (hasCoffee) perceived += 1.2;  // Thermogenic effect
+            if (windowOpen) perceived -= 3.5; // Convection cooling
+
+            // 3. The Zickerick Formula
+            let zic = perceived - target;
+            
+            // Round nicely
+            zic = Math.round(zic * 10) / 10;
+            if (Math.abs(zic) < 0.1) zic = 0; // Prevent -0.0
 
             updateUI(zic);
         }
 
         function updateUI(zic) {
-            const zicResult = document.getElementById('zicResult');
-            const resultCircle = document.getElementById('resultCircle');
-            const zicText = document.getElementById('zicText');
+            const resultEl = document.getElementById('zicResult');
+            const signEl = document.getElementById('zicSign');
+            const textEl = document.getElementById('zicText');
+            const bar = document.getElementById('resultBar');
+            const iconWrap = document.getElementById('statusIcon');
+            const ambientBg = document.getElementById('ambientBg');
+            
+            // Trigger animation re-flow
+            resultEl.classList.remove('value-update');
+            void resultEl.offsetWidth; 
+            resultEl.classList.add('value-update');
 
-            zicResult.innerText = (zic > 0 ? '+' : '') + zic;
+            // Values
+            signEl.innerText = zic > 0 ? '+' : (zic < 0 ? '' : ''); // No minus sign for 0 handled by logic but text-alignment handles negative numbers usually
+            if(zic < 0) signEl.innerText = ""; // Let the number carry the negative sign
+            resultEl.innerText = zic.toFixed(1);
 
-            // Color Logic
-            let colorClass = "";
-            let borderColor = "";
-            let textColor = "";
+            // States
+            let state = 'neutral';
+            let message = "Optimale Bedingungen.";
 
-            if (zic > -1 && zic < 1) {
-                // Neutral / Green
-                resultCircle.style.backgroundColor = "#ecfccb"; // lime-100
-                resultCircle.style.borderColor = "#84cc16"; // lime-500
-                zicResult.style.color = "#3f6212"; // lime-800
-                zicText.innerText = "Perfektes Wohlfühl-Nirvana.";
-            } else if (zic >= 1) {
-                // Hot / Red
-                const intensity = Math.min((zic / 10), 1); // Cap at 1
-                resultCircle.style.backgroundColor = `rgba(254, 202, 202, ${0.3 + intensity/2})`; // red
-                resultCircle.style.borderColor = `rgba(239, 68, 68, ${0.5 + intensity})`;
-                zicResult.style.color = "#991b1b";
-                
-                if (zic < 3) zicText.innerText = "Muckelig warm. Ärmel hochkrempeln.";
-                else if (zic < 6) zicText.innerText = "Tropenklima. Deo versagt.";
-                else if (zic < 10) zicText.innerText = "Spontane Selbstentzündung droht.";
-                else zicText.innerText = "Du bist jetzt flüssiges Plasma.";
-            } else {
-                // Cold / Blue
-                const intensity = Math.min((Math.abs(zic) / 10), 1);
-                resultCircle.style.backgroundColor = `rgba(191, 219, 254, ${0.3 + intensity/2})`; // blue
-                resultCircle.style.borderColor = `rgba(59, 130, 246, ${0.5 + intensity})`;
-                zicResult.style.color = "#1e40af";
-
-                if (zic > -3) zicText.innerText = "Etwas frisch. Pulli zurechtzupfen.";
-                else if (zic > -6) zicText.innerText = "Gänsehaut-Alarm. Zähne klappern.";
-                else if (zic > -10) zicText.innerText = "Überleben nur durch Gruppenkuscheln möglich.";
-                else zicText.innerText = "Kryonik-Experiment erfolgreich eingeleitet.";
+            if (zic >= 1.0) {
+                state = 'hot';
+                if (zic < 3) message = "Leicht überhitzt. Konzentration sinkt.";
+                else if (zic < 6) message = "Hitzestau. Produktivität gefährdet.";
+                else message = "Kritische Kernschmelze. Evakuierung ratsam.";
+            } else if (zic <= -1.0) {
+                state = 'cold';
+                if (zic > -3) message = "Leicht unterkühlt. Finger werden steif.";
+                else if (zic > -6) message = "Akute Kältestarre. Tee erforderlich.";
+                else message = "Stationäre Eiszeit. Heizung prüfen.";
             }
-        }
 
-        // Init
-        calculateZic();
+            // Apply Theme
+            const theme = config.colors[state];
+            
+            // Result Bar Color
+            bar.style.backgroundColor = state === 'neutral' ? '#1e293b' : theme.bar;
+            
+            // Ambient Background
+            if (state === 'hot') {
+                ambientBg.className = "fixed inset-0 z-0 opacity-40 transition-colors duration-1000 bg-gradient-to-tr from-orange-100 to-red-200";
+            } else if (state === 'cold') {
+                ambientBg.className = "fixed inset-0 z-0 opacity-40 transition-colors duration-1000 bg-gradient-to-tr from-slate-200 to-cyan-200";
+            } else {
+                ambientBg.className = "fixed inset-0 z-0 opacity-40 transition-colors duration-1000 bg-gradient-to-br from-slate-200 to-emerald-100";
+            }
+
+            // Icon Update
+            iconWrap.className = `w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-500 shadow-sm ${state === 'neutral' ? 'bg-emerald-100 text-emerald-600' : (state === 'hot' ? 'bg-red-100 text-red-600' : 'bg-sky-100 text-sky-600')}`;
+            iconWrap.innerHTML = `<i class="fas ${theme.icon}"></i>`;
+            
+            // Text Message
+            textEl.innerText = message;
+        }
 
     </script>
 </body>
 </html>
+
 
